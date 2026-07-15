@@ -8,6 +8,7 @@ import { GristStatusChip } from "@/components/grist-status-chip"
 import { TemplateLanding } from "@/components/template-landing"
 import { ThemeProvider } from "@/components/theme-provider.tsx"
 import { parseShowcasePath } from "@/lib/showcase-routing"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import "./index.css"
 import App, { GRIST_OPTIONS } from "./App.tsx"
 
@@ -39,10 +40,13 @@ createRoot(document.getElementById("root")!).render(
           <GristStatusChip />
           <GristBoundary
             gate={GRIST_OPTIONS.columns?.length ? "canRender" : "ready"}
+            unavailableGraceMs={4000}
           >
             <div className="min-h-full w-full bg-background text-foreground">
               <GristSdkAlerts>
-                <App />
+                <TooltipProvider>
+                  <App />
+                </TooltipProvider>
               </GristSdkAlerts>
             </div>
           </GristBoundary>
