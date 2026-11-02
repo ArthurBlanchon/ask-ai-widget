@@ -1,5 +1,5 @@
 import { Toaster } from "sonner"
-import AiChatbot from "./components/ai-chatbot"
+import AiChatbot from "@/components/ai-chatbot"
 
 import { useWidgetMetadata, type UseGristOptions } from "grist-widget-sdk"
 
