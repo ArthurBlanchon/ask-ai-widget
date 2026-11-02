@@ -39,11 +39,15 @@
 //     Regenerates versions.json (release runs only) and commits + pushes the
 //     gh-pages tree with a rebase-and-retry loop.
 //
-//   reset-branches [--repo-dir <dir>]
+//   reset-branches [--repo-dir <dir>] [--repo <name>] [--owner-repo <owner/name>]
 //     On a repo's first genuine release only (caller gates on plan()'s
-//     firstRelease): resets package.json's version to 0.0.1, prunes every
-//     branch except main/dev/gh-pages, and
-//     force-resets dev to main's current tip.
+//     firstRelease): renames the four placeholder-identity spots (only if
+//     --repo is given and they still carry the template's own placeholder
+//     text -- a no-op for a CLI scaffold that already renamed itself), writes
+//     the /latest/ install URL into README.md's install-url block (owner/name
+//     from --owner-repo, else $GITHUB_REPOSITORY; a no-op without it), resets
+//     package.json's version to 0.0.1, prunes every branch except
+//     main/dev/gh-pages, and force-resets dev to main's current tip.
 
 import {
   existsSync,
@@ -130,11 +134,45 @@ export function plan(siteDir, repo, event, ref, { force = false } = {}) {
   if (!version) throw new Error("package.json has no version")
   const versionDir = join(siteDir, `v${version}`)
   const exists = isGenuineRelease(versionDir, repo)
+  const skip = exists && !force
+  // T-07: "merging without bumping the version publishes nothing" was a
+  // silent no-op, documented in two places (this file's own header comment,
+  // and AGENTS.md's Anti-patterns) instead of made unrepresentable. Turn it
+  // loud for the one case that actually means "I meant to publish and
+  // didn't": a genuine `push` to main (not `workflow_dispatch`, which has
+  // its own explicit --force for intentional rebuilds) landed on a repo
+  // that's already released before, and the version it resolved to was
+  // already published. If HEAD's parent had the *same* version, nothing
+  // about this push looks like an intentional re-run -- fail the workflow
+  // step instead of quietly reporting success. Falls back to today's silent
+  // skip if HEAD~1 doesn't resolve (e.g. a squashed/rebased history, or
+  // this being the repo's very first commit) -- this is a backstop for the
+  // common case, not a guarantee for every git topology.
+  if (event === "push" && !firstRelease && skip) {
+    try {
+      const previousPkgJson = execFileSync("git", ["show", "HEAD~1:package.json"], {
+        encoding: "utf8",
+      })
+      const previousVersion = JSON.parse(previousPkgJson).version
+      if (previousVersion === version) {
+        throw new Error(
+          `deploy: this push to main would publish nothing -- v${version} was already released and ` +
+            `package.json's version is unchanged from the previous commit. Bump "version" in package.json ` +
+            `before merging if you meant to publish new content (see AGENTS.md's Anti-patterns).`
+        )
+      }
+    } catch (err) {
+      // Re-throw our own message; swallow only git/JSON failures (HEAD~1
+      // missing, package.json didn't exist at that commit, etc.) and fall
+      // through to the existing silent-skip behavior for those cases.
+      if (err instanceof Error && err.message.startsWith("deploy: this push")) throw err
+    }
+  }
   return {
     context: "release",
     version,
     base: basePathFor(repo, "release", version),
-    skip: exists && !force,
+    skip,
     reason: exists ? (force ? "force-rebuild" : "already-published") : "new-version",
     // Exposed so the workflow can gate a one-time repo cleanup (prune stray
     // branches, reset dev to main) on exactly this signal -- see
@@ -349,9 +387,89 @@ export function finalize({ siteDir, updateVersions, push, commitMessage, remoteB
 }
 
 /**
+ * Derive an npm-safe package name and a human title from a real GitHub repo
+ * name -- which allows characters (uppercase, underscores, periods) npm
+ * package names don't. Mirrors the title-casing
+ * `packages/create-grist-widget/bin/create-grist-widget.mjs` already applies
+ * to its own CLI-provided `rawName`, so a repo named e.g. `Ask-Genial_Widget`
+ * produces the same shape of package name / title a CLI user typing
+ * `ask-genial-widget` would have gotten.
+ */
+export function deriveIdentity(repoName) {
+  const packageName =
+    (repoName || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9-]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "grist-widget"
+  const title = packageName
+    .split("-")
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase() + w.slice(1))
+    .join(" ")
+  return { packageName, title }
+}
+
+// README.md's install-URL block. awesome-grist-widgets only registers a
+// widget whose install URL its own repo states explicitly, so the first
+// release writes it there (docs/planning/2026-11-01-widget-lifecycle-plan.md,
+// R1). A README without these markers is left alone.
+const INSTALL_URL_START = "<!-- install-url:start -->"
+const INSTALL_URL_END = "<!-- install-url:end -->"
+
+/**
+ * The GitHub Pages URL of the `/latest/` channel for `owner/repo`, the same
+ * path plan() builds the release under. A `<owner>.github.io` repo is a
+ * user/org site, served at the domain root. A custom Pages domain isn't
+ * known here: edit the README line if the widget uses one.
+ */
+export function latestPagesUrl(ownerRepo) {
+  const [owner, repo] = String(ownerRepo || "").split("/")
+  if (!owner || !repo) return null
+  const host = `${owner.toLowerCase()}.github.io`
+  const base = repo.toLowerCase() === host ? `https://${host}/` : `https://${host}/${repo}/`
+  return `${base}latest/`
+}
+
+/** README text with its install-URL block set to `url`; unchanged without the markers. */
+export function withInstallUrl(readme, url) {
+  const start = readme.indexOf(INSTALL_URL_START)
+  const end = readme.indexOf(INSTALL_URL_END, start)
+  if (start < 0 || end < 0) return readme
+  const block = [
+    INSTALL_URL_START,
+    `**Install URL**, to paste into a Grist custom widget's URL field: <${url}>`,
+    INSTALL_URL_END,
+  ].join("\n")
+  return readme.slice(0, start) + block + readme.slice(end + INSTALL_URL_END.length)
+}
+
+/**
+ * The same four placeholder-identity edits
+ * `packages/create-grist-widget/bin/create-grist-widget.mjs` applies at
+ * scaffold time, parameterized by a derived identity instead of CLI input.
+ * Each substitution is a plain string replace, so it's naturally a no-op
+ * wherever the placeholder text is already gone -- a CLI-scaffolded repo
+ * (whose name may legitimately differ from its GitHub repo name) is never
+ * touched by this.
+ */
+function identityEdits({ packageName, title }) {
+  return [
+    ["package.json", [["grist-widget-template-vite", packageName]]],
+    ["README.md", [["grist-widget-template-vite", packageName]]],
+    ["index.html", [["<title>Grist Widget</title>", `<title>${title}</title>`]]],
+    ["src/App.tsx", [['title: "Grist Widget Template",', `title: "${title}",`]]],
+  ]
+}
+
+/**
  * Establish the state every widget repo should start from, on its first
  * genuine release only (gated by the caller on `plan()`'s `firstRelease`):
  *
+ *   0. If `repo` is given, rewrite the four placeholder-identity spots (see
+ *      `identityEdits`) to match the real repo name -- the piece "Use this
+ *      template" skips entirely, since it copies the repo verbatim and never
+ *      runs the CLI's own rename step. Folded into the same commit as the
+ *      version reset below, not a separate one.
  *   1. Reset package.json's version to 0.0.1. The first release already
  *      published v0.0.1 (forced by plan() regardless of package.json), but a
  *      repo copied via GitHub's "Use this template" still carries the source
@@ -372,27 +490,75 @@ export function finalize({ siteDir, updateVersions, push, commitMessage, remoteB
  * a genuine release already published (firstRelease=false) and skips both
  * the release and this reset, so there's no loop.
  */
-export function resetBranchesIfFirstRelease(repoDir, keep = ["main", "dev", "gh-pages"]) {
+export function resetBranchesIfFirstRelease(
+  repoDir,
+  repo,
+  keep = ["main", "dev", "gh-pages"],
+  ownerRepo = process.env.GITHUB_REPOSITORY,
+) {
+  const changedFiles = new Set()
+  const renamedFiles = []
+
+  if (repo) {
+    for (const [file, subs] of identityEdits(deriveIdentity(repo))) {
+      const p = join(repoDir, file)
+      if (!existsSync(p)) continue
+      const before = readFileSync(p, "utf8")
+      const after = subs.reduce((text, [search, replace]) => text.split(search).join(replace), before)
+      if (after !== before) {
+        writeFileSync(p, after)
+        changedFiles.add(file)
+        renamedFiles.push(file)
+      }
+    }
+  }
+  const identityReset = renamedFiles.length > 0
+
+  // The install URL, for registries and for whoever reads the README.
+  let installUrl = null
+  const readmePath = join(repoDir, "README.md")
+  const url = latestPagesUrl(ownerRepo)
+  if (url && existsSync(readmePath)) {
+    const before = readFileSync(readmePath, "utf8")
+    const after = withInstallUrl(before, url)
+    if (after !== before) {
+      writeFileSync(readmePath, after)
+      changedFiles.add("README.md")
+      installUrl = url
+    }
+  }
+
   let versionReset = false
   const pkgPath = join(repoDir, "package.json")
   if (existsSync(pkgPath)) {
+    // Re-read after any identity edit above, so a rewritten `name` survives
+    // this JSON round-trip instead of being clobbered by it.
     const pkg = JSON.parse(readFileSync(pkgPath, "utf8"))
     if (pkg.version !== "0.0.1") {
       pkg.version = "0.0.1"
       writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n")
-      git(["add", "package.json"], repoDir)
-      git(
-        [
-          "-c", "user.name=github-actions[bot]",
-          "-c", "user.email=41898282+github-actions[bot]@users.noreply.github.com",
-          "commit", "-m", "chore: reset version to 0.0.1 for a clean first release",
-        ],
-        repoDir,
-      )
-      git(["push", "origin", "HEAD:refs/heads/main"], repoDir)
+      changedFiles.add("package.json")
       versionReset = true
     }
   }
+
+  if (changedFiles.size > 0) {
+    const parts = []
+    if (identityReset) parts.push("personalize scaffold")
+    if (installUrl) parts.push("write install URL")
+    if (versionReset) parts.push("reset version to 0.0.1")
+    git(["add", ...changedFiles], repoDir)
+    git(
+      [
+        "-c", "user.name=github-actions[bot]",
+        "-c", "user.email=41898282+github-actions[bot]@users.noreply.github.com",
+        "commit", "-m", `chore: ${parts.join(" + ")} for a clean first release`,
+      ],
+      repoDir,
+    )
+    git(["push", "origin", "HEAD:refs/heads/main"], repoDir)
+  }
+
   const raw = git(["ls-remote", "--heads", "origin"], repoDir)
   const branches = raw
     ? raw.split("\n").map((line) => line.split("refs/heads/")[1]).filter(Boolean)
@@ -404,7 +570,7 @@ export function resetBranchesIfFirstRelease(repoDir, keep = ["main", "dev", "gh-
     deletedBranches.push(b)
   }
   git(["push", "--force", "origin", "HEAD:refs/heads/dev"], repoDir)
-  return { deletedBranches, devReset: true, versionReset }
+  return { deletedBranches, devReset: true, versionReset, identityReset, renamedFiles, installUrl }
 }
 
 // ----------------------------------------------------------------------------
@@ -467,7 +633,12 @@ function main() {
       break
     }
     case "reset-branches": {
-      const res = resetBranchesIfFirstRelease(args["repo-dir"] || ".")
+      const res = resetBranchesIfFirstRelease(
+        args["repo-dir"] || ".",
+        args.repo,
+        undefined,
+        args["owner-repo"] || process.env.GITHUB_REPOSITORY,
+      )
       console.log("reset-branches:", JSON.stringify(res))
       break
     }

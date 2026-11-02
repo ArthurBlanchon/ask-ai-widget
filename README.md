@@ -6,6 +6,10 @@ answers with a rich chat UI (markdown, code blocks with syntax highlighting,
 math, mermaid diagrams, reasoning traces, tool calls, and more) built on the
 bundled `src/components/ai-elements/` library.
 
+<!-- install-url:start -->
+**Install URL**, to paste into a Grist custom widget's URL field: <https://arthurblanchon.github.io/ask-ai-widget/latest/>
+<!-- install-url:end -->
+
 `src/App.tsx` declares `GRIST_OPTIONS` (`requiredAccess: "read table"`) and
 renders `AiChatbot` (`src/components/ai-chatbot.tsx`) plus a `sonner`
 `Toaster`. `AiChatbot` reads the selected table through the SDK, lets the
