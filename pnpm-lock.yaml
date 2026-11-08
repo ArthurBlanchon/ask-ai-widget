@@ -139,8 +139,8 @@ importers:
         specifier: ^6.1.2
         version: 6.1.2(vite@8.3.5(@types/node@26.6.6)(jiti@2.7.0))
       create-grist-widget:
-        specifier: ^0.3.30
-        version: 0.3.30
+        specifier: ^0.3.32
+        version: 0.3.32
       eslint:
         specifier: ^10.13.0
         version: 10.14.0(jiti@2.7.0)
@@ -2067,8 +2067,8 @@ packages:
   cose-base@2.2.0:
     resolution: {integrity: sha512-AzlgcsCbUMymkADOJtQm3wO9S3ltPfYOFD5033keQn9NJzIbtnZj+UdBJe7DYml/8TdbtHJW3j58SOnKhWY/5g==}
 
-  create-grist-widget@0.3.30:
-    resolution: {integrity: sha512-qRYWoleO2ew0bC63ekaaLi4zm+6gLnh3KQIsrUc1mTXF71L/LZj9M9YJLfiQAj+MeMHshLVJsYzBcueaSJQoxA==}
+  create-grist-widget@0.3.32:
+    resolution: {integrity: sha512-TlxaXXAMlty5HoQ3vkhgP0oTFecAI31VQ3iDy0McVr5ZH7s0rU9GgRZyaPhcPThkqwzyxBFDIasNjIAuU6lmmg==}
     engines: {node: ^22.22.0 || >=24.15.0}
     hasBin: true
 
@@ -6337,7 +6337,7 @@ snapshots:
     dependencies:
       layout-base: 2.0.1
 
-  create-grist-widget@0.3.30:
+  create-grist-widget@0.3.32:
     dependencies:
       '@clack/prompts': 1.8.1
 
