@@ -1,7 +1,7 @@
 {
   "name": "Ask AI",
   "widgetId": "@arthurblanchon/ask-ai-widget",
-  "url": "https://arthurblanchon.github.io/ask-ai-widget/v0.1.0/",
+  "url": "https://arthurblanchon.github.io/ask-ai-widget/v0.2.0/",
   "published": true,
   "accessLevel": "read table",
   "renderAfterReady": false,
@@ -12,14 +12,15 @@
       "url": "https://github.com/ArthurBlanchon"
     }
   ],
-  "lastUpdatedAt": "2026-11-08T18:28:50.569Z",
+  "lastUpdatedAt": "2026-11-12T16:41:21.824Z",
   "gristWidgetSdk": {
     "schema": 1,
     "channel": "release",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "repository": "https://github.com/ArthurBlanchon/ask-ai-widget",
     "license": "MIT",
-    "sdk": "0.3.27",
-    "createGristWidget": "0.3.32"
+    "sdk": "0.4.0",
+    "createGristWidget": "0.4.0",
+    "demo": "https://arthurblanchon.github.io/ask-ai-widget/v0.2.0/demo/"
   }
 }
