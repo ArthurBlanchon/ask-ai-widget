@@ -21,7 +21,7 @@
     "demo": "create-grist-widget demo"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^3.0.61",
+    "@ai-sdk/openai": "^4.0.106",
     "@fontsource-variable/geist": "^5.3.0",
     "@radix-ui/react-use-controllable-state": "^1.2.2",
     "@rive-app/react-webgl2": "^4.28.3",
