@@ -57,8 +57,8 @@ importers:
         specifier: ^8.6.0
         version: 8.6.0(react@19.3.1)
       grist-widget-sdk:
-        specifier: ^0.6.2
-        version: 0.6.2(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        specifier: ^0.8.0
+        version: 0.8.0(@testing-library/react@16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       lucide-react:
         specifier: ^1.70.0
         version: 1.73.0(@types/react@19.3.0)(react@19.3.1)
@@ -139,8 +139,8 @@ importers:
         specifier: ^6.2.1
         version: 6.3.0(vite@8.3.8(@types/node@26.6.6)(jiti@2.7.0))
       create-grist-widget:
-        specifier: ^0.6.2
-        version: 0.6.2
+        specifier: ^0.8.0
+        version: 0.8.0
       eslint:
         specifier: ^10.13.0
         version: 10.14.0(jiti@2.7.0)
@@ -350,12 +350,12 @@ packages:
   '@chevrotain/types@11.1.2':
     resolution: {integrity: sha512-U+HFai5+zmJCkK86QsaJtoITlboZHBqrVketcO2ROv865xfCMSFpELQoz1GkX5GzME8pTa+3kbKrZHQtI0gdbw==}
 
-  '@clack/core@1.5.1':
-    resolution: {integrity: sha512-iHTrHA8MtVuLl2TfZySmcKv1qO2PoyC9Z7pfSDozEuV5vtY3/wcOPKJXlqJ5Oq2Cx5DDGQGAMVx6HZfRRoVEbQ==}
+  '@clack/core@1.6.0':
+    resolution: {integrity: sha512-4GZynIB2IIe431odxesswvWTCP6orvqd6e2b07b3VFWBQRqUqIHc/EPIZwFoKS692QBp+ooPuXKaJV8g4kXuYA==}
     engines: {node: '>= 20.12.0'}
 
-  '@clack/prompts@1.8.1':
-    resolution: {integrity: sha512-dlT1m5e/0yUL0kRNcQn7yGLVThkgbB0Ga/1AmfDDC/8ik6AIiSf2QLQO2zPYvefsHP0aFgxO93cVLCCfDp7kzQ==}
+  '@clack/prompts@1.9.0':
+    resolution: {integrity: sha512-tEj8X2No2A1c9NDnZECxiiJ8TP3vmFlN9tLlLeSaMqVW4tUmVG2R4qpv/eP4zymWxnymYLkLcIYVV0VcWj3RCQ==}
     engines: {node: '>= 20.12.0'}
 
   '@dotenvx/dotenvx@1.75.1':
@@ -2045,8 +2045,8 @@ packages:
   cose-base@2.2.0:
     resolution: {integrity: sha512-AzlgcsCbUMymkADOJtQm3wO9S3ltPfYOFD5033keQn9NJzIbtnZj+UdBJe7DYml/8TdbtHJW3j58SOnKhWY/5g==}
 
-  create-grist-widget@0.6.2:
-    resolution: {integrity: sha512-tw8RCP6WYjgX0SGaZtKMDBdkvUDOz1SYoj6MUk1GfJhEIupwm1rTkety6QaRMkJ+kmX04vdh9b/IgUQu8kw2PQ==}
+  create-grist-widget@0.8.0:
+    resolution: {integrity: sha512-po7Q3RbWGXsaVQNz3acQaTqNqI3RBkAQlgKZjiqagzs/ANzrtVG32BRGtTyOmq4qJd+RKy59odE+3D26ZzDnaA==}
     engines: {node: ^22.22.2 || >=24.15.0}
     hasBin: true
 
@@ -2589,12 +2589,16 @@ packages:
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
 
-  grist-widget-sdk@0.6.2:
-    resolution: {integrity: sha512-f4V3dSEuD8ZtyRdaJ4D6hQG3ZiMPmFhKxL3EpGa0PLiI9qds6sbrX8yN5mIniQkn+cl9Eet1W8X6/BP2n2zzrw==}
+  grist-widget-sdk@0.8.0:
+    resolution: {integrity: sha512-KvKPob72lP1lDwI5lDndKWt8XB9LjO6LDCDXx1VgDAOHIrqP4Re0xxt2pJv9wmMZ2xj4fMgJOyFH0iMQ+hObSA==}
     engines: {node: '>=18'}
     peerDependencies:
+      '@testing-library/react': '>=14'
       react: '>=18'
       react-dom: '>=18'
+    peerDependenciesMeta:
+      '@testing-library/react':
+        optional: true
 
   hachure-fill@0.5.2:
     resolution: {integrity: sha512-3GKBOn+m2LX9iq+JC1064cSFprJY4jL1jCXTcpnfER5HYE2l/4EfWSGzkPa/ZDBmYI0ZOEj5VHV/eKnPGkHuOg==}
@@ -3721,6 +3725,10 @@ packages:
   sisteransi@1.0.5:
     resolution: {integrity: sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==}
 
+  sisteransi@2.0.0:
+    resolution: {integrity: sha512-2WCqLdt12eN6ehLI50S2/ZxoowXU3DD1KVPRyVP0WEsFahrGZZmCdq1K59qjJljMRIDTwx1D9YaRK+hDneBUMg==}
+    engines: {node: '>=20'}
+
   smart-buffer@4.2.0:
     resolution: {integrity: sha512-94hK0Hh8rPqQl2xXc3HsaBoOXKV20MToPkcXvwbISWLEs+64sBq5kFgn2kJDHb1Pry9yrP0dxrCI9RRci7RXKg==}
     engines: {node: '>= 6.0.0', npm: '>= 3.0.0'}
@@ -4429,17 +4437,18 @@ snapshots:
 
   '@chevrotain/types@11.1.2': {}
 
-  '@clack/core@1.5.1':
+  '@clack/core@1.6.0':
     dependencies:
-      fast-wrap-ansi: 0.2.2
-      sisteransi: 1.0.5
-
-  '@clack/prompts@1.8.1':
-    dependencies:
-      '@clack/core': 1.5.1
       fast-string-width: 3.0.2
       fast-wrap-ansi: 0.2.2
-      sisteransi: 1.0.5
+      sisteransi: 2.0.0
+
+  '@clack/prompts@1.9.0':
+    dependencies:
+      '@clack/core': 1.6.0
+      fast-string-width: 3.0.2
+      fast-wrap-ansi: 0.2.2
+      sisteransi: 2.0.0
 
   '@dotenvx/dotenvx@1.75.1':
     dependencies:
@@ -6221,9 +6230,9 @@ snapshots:
     dependencies:
       layout-base: 2.0.1
 
-  create-grist-widget@0.6.2:
+  create-grist-widget@0.8.0:
     dependencies:
-      '@clack/prompts': 1.8.1
+      '@clack/prompts': 1.9.0
 
   cross-spawn@7.0.6:
     dependencies:
@@ -6771,11 +6780,13 @@ snapshots:
 
   graceful-fs@4.2.11: {}
 
-  grist-widget-sdk@0.6.2(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
+  grist-widget-sdk@0.8.0(@testing-library/react@16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react-dom@19.3.1(react@19.3.1))(react@19.3.1):
     dependencies:
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
       zod: 4.6.7
+    optionalDependencies:
+      '@testing-library/react': 16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
 
   hachure-fill@0.5.2: {}
 
@@ -8226,6 +8237,8 @@ snapshots:
   signal-exit@4.1.0: {}
 
   sisteransi@1.0.5: {}
+
+  sisteransi@2.0.0: {}
 
   smart-buffer@4.2.0: {}
 
