@@ -11,24 +11,38 @@
 
 ## The widget contract
 
-The widget lives in `src/app/`. Its entry point, `src/app/App.tsx`, has three exports:
+The widget lives in `src/app/`. Its entry point, `src/app/App.tsx`, exports its declaration
+and the widget:
 
 ```tsx
-export const GRIST_OPTIONS: UseGristOptions = { requiredAccess: "read table" }
-export const WIDGET_METADATA = { title: "...", description: "..." } as const
+export const widget = defineGristWidget({
+  title: "...",
+  description: "...",
+  requiredAccess: "read table",
+  columns: [{ name: "Title", type: "Text" }],
+})
+
 export default function App() {
-  const w = useGrist()
-  // ...
+  const w = widget.useGrist() // typed from the declaration: no generics
+  // w.mappedRecord, w.updateRecord({ Title: "..." }), ...
 }
 ```
 
-`GRIST_OPTIONS` may live in a file of its own, as long as `App.tsx` re-exports it: the
-template's `src/main.tsx` imports both from `./app/App`.
+The declaration may live in a file of its own (`src/app/widget.ts`), as long as `App.tsx`
+re-exports it. A widget made before `defineGristWidget` exports `GRIST_OPTIONS` and
+`WIDGET_METADATA` instead; both forms work.
 
-`src/main.tsx` is one call, `mountGristWidget({ App, options: GRIST_OPTIONS, dev })` from
-`grist-widget-sdk/app`: inside Grist it renders `<App />` in `GristWidgetProvider` and
-`GristBoundary`, with the SDK's alerts and Grist's light/dark theme. Access level, column
-mapping, and rendering all live in `src/app/App.tsx` — that's the file to edit.
+`src/main.tsx` is one call, `mountGristWidget(entry, { dev })` from `grist-widget-sdk/app`,
+with `entry` the module `src/app/App.tsx`: inside Grist it renders the widget in
+`GristWidgetProvider` and `GristBoundary`, with the SDK's alerts and Grist's light/dark
+theme. A widget with settings exports `Settings` (only the fields, which write its options)
+from `src/app/App.tsx`: Grist's "Open configuration" then opens the SDK's Settings view,
+which `w.openConfiguration()` opens from the widget's own button
+(<https://gristwidgets.com/docs/sdk/guide/widget-options>). To replace the alerts or the
+pages shown outside Grist, export `Alerts`, `LocalDevPage` or `ReleasePage` from
+`src/app/App.tsx`; a provider goes inside `App`. Never
+edit `src/main.tsx`: `upgrade` refuses to run over a changed one. Access level, column
+mapping, and rendering all live in `src/app/App.tsx`: that's the file to edit.
 
 ### What is the template's, what is the widget's
 
@@ -53,35 +67,59 @@ mapping, and rendering all live in `src/app/App.tsx` — that's the file to edit
 
 1. **Widgets use the SDK.** No direct `window.grist.*` calls — use `useGrist()` and the
    other `grist-widget-sdk` hooks.
-2. **`pnpm dev` is a bare shell, on purpose — not a seeded preview.** Opened outside Grist
-   it shows the SDK's local-dev page; the widget itself only renders once actually embedded in a
-   Grist document. This is deliberate, not a gap: an emulator can't guarantee parity with
-   real Grist, so a fake local preview would teach the wrong lesson. Trust `pnpm test`
-   (headless, real assertions) for local feedback, and the `dev`-branch loop below for real
-   behavior — don't build or suggest a seeded `pnpm dev` preview. `pnpm demo` is not one:
-   it runs the widget in a real Grist (Docker, pinned image) with a generated document,
-   for a local look or a demo; it is optional, and nothing else needs Docker. Nor is the
-   demo page (`pnpm demo --save`, `public/demo/`): it is Grist itself, running in the
-   browser from static files, with a document the owner commits and may edit.
-3. **Widget changes get a test.** `src/app/App.test.tsx` uses `renderWithGrist` + `presets` from
-   `grist-widget-sdk/emulator/testing` — no browser or real Grist doc needed. Run `pnpm test`.
+2. **The widget only renders inside real Grist, never in a seeded preview.** Opened
+   outside Grist, `pnpm dev` shows the SDK's local-dev page: an emulator can't guarantee
+   parity with real Grist, so a fake preview would teach the wrong lesson. Real Grist comes
+   three ways, none of them a preview:
+   - **`pnpm dev`, then `http://localhost:5173/demo/index.html`:** the demo page,
+     `public/demo/` (Grist itself, running in the browser from static files), on the dev
+     server's widget, so edits reload in place. No Docker. After changing the declared
+     columns, regenerate its document with `pnpm demo --save`.
+   - **`pnpm demo`:** a real Grist in Docker (pinned image) with a generated document.
+   - **The `dev` branch's `/dev/`** in a Grist document of the owner's: the check that counts.
+
+   Trust `pnpm test` (headless, real assertions) for fast local feedback. Don't build or
+   suggest a seeded `pnpm dev` preview.
+3. **Widget changes get a test.** `src/app/App.test.tsx` uses
+   `renderWithGrist(<App />, { widget, rows })` from `grist-widget-sdk/emulator/testing`: the
+   widget against its declared columns, mapped, with typed rows; no browser or real Grist doc
+   needed. Run `pnpm test`.
 4. **Always develop on `dev`, release by merging to `main`.** Commit and push to `dev` for
    every change — it auto-deploys a live preview at `.../dev/` that self-reloads inside an
-   open Grist document a few seconds later. Bump `package.json`'s `version` *before*
-   opening the `dev` → `main` PR: merging without a version bump publishes nothing (the
-   release build silently no-ops whenever that version's directory already exists — the PR
-   merges cleanly and CI reports success either way).
-5. **Template updates arrive with `create-grist-widget`.** Dependabot opens a pull request of
-   its own for it. Once that is merged into `dev`, run `pnpm exec create-grist-widget upgrade`
+   open Grist document a few seconds later. To release, run `pnpm release <patch|minor|major>`
+   on `dev` (it bumps `package.json`'s `version`, writes the `CHANGELOG.md` entry and
+   commits), push, then open the `dev` → `main` PR: merging without a version bump
+   publishes nothing (the release build silently no-ops whenever that version's directory
+   already exists — the PR merges cleanly and CI reports success either way).
+5. **Template updates arrive with `create-grist-widget`.** Dependabot opens one pull request
+   moving it and `grist-widget-sdk` together. Once that is merged into `dev`, run `pnpm exec create-grist-widget upgrade`
    on `dev` in a follow-up pull request, then `pnpm install`, `pnpm typecheck`, `pnpm lint` and
-   `pnpm test`. It rewrites only the template's files (listed above) and says what it changed.
+   `pnpm test`. It rewrites the template's files (listed above) and, in the widget's code, the
+   `grist-widget-sdk` names a release removed, and says what it changed and what is left
+   to change by hand.
+
+## Patterns to start from
+
+The template is the one starting point. For a pattern close to the widget you need, read a
+catalog widget built with the same SDK, its `SPEC.md` (the acceptance criteria), its code
+and its tests, and adapt what fits into `src/app/`:
+<https://github.com/ArthurBlanchon/grist-widget-sdk/tree/main/widgets> (live, each with a
+demo: <https://gristwidgets.com/widgets/>). For example: drag and drop between columns
+(`kanban-board`), a form that writes a record (`record-editor`), many rows at once
+(`bulk-editor`), attachments (`attachment-viewer`, `file-uploader`), a map (`map`), a
+chart (`chart-builder`). Copy code, never a dependency on `widgets/_shared/`: it exists only
+in that repository. `main` builds against the SDK in development: before copying a
+`grist-widget-sdk` name, check that this widget's version exports it
+(`node_modules/grist-widget-sdk/dist/`), or read the catalog at the tag
+`grist-widget-sdk@<that version>`. A missing name means upgrading the SDK, never importing
+from `grist-widget-sdk/src/`.
 
 ## Commands
 
 | Intent | Command |
 | --- | --- |
 | Install | `pnpm install` |
-| Dev server (bare shell outside Grist, pointing at the `dev` loop) | `pnpm dev` |
+| Dev server; `/demo/index.html` opens the widget in real Grist in the browser, edits reloading in place | `pnpm dev` |
 | The widget in a real local Grist (Docker; prints the URL, Ctrl-C stops it) | `pnpm demo` |
 | The widget's demo page in `public/demo/` (Docker to generate; served at `<channel>/demo/`) | `pnpm demo --save` |
 | Build | `pnpm build` |
@@ -90,6 +128,7 @@ mapping, and rendering all live in `src/app/App.tsx` — that's the file to edit
 | Format | `pnpm format` |
 | Type-check | `pnpm typecheck` |
 | Preview a production build | `pnpm preview` |
+| Prepare a release on `dev` (version, `CHANGELOG.md`, commit), then push and open `dev` → `main` | `pnpm release <patch\|minor\|major>` |
 | Bring the template's files up to date (on `dev`, after updating create-grist-widget) | `pnpm exec create-grist-widget upgrade` |
 
 ## Path map
@@ -97,10 +136,10 @@ mapping, and rendering all live in `src/app/App.tsx` — that's the file to edit
 | Concept | Path |
 | --- | --- |
 | The widget (everything in it is the widget's own) | `src/app/` |
-| Its entry point (GRIST_OPTIONS, WIDGET_METADATA, App) | `src/app/App.tsx` |
+| Its entry point (the `export const widget` declaration, the default export App) | `src/app/App.tsx` |
 | Widget test (the pattern to copy for new tests) | `src/app/App.test.tsx` |
 | Smoke test (one smokeTestWidget call; CI runs it on SDK updates) | `src/app/App.smoke.test.tsx` |
-| Grist wiring (mountGristWidget, inside vs. outside Grist) | `src/main.tsx` |
+| Grist wiring (mountGristWidget(entry), inside vs. outside Grist; never edited) | `src/main.tsx` |
 | ui primitives | `src/components/ui/` |
 | Deploy workflow (runs grist-widget-deploy from the create-grist-widget devDependency: version guard, channel logic) | `.github/workflows/deploy.yml` |
 | Pull request checks (lint, test, build) | `.github/workflows/ci.yml` |
@@ -119,11 +158,13 @@ creates a `gh-pages` branch — these settings can't be applied before that exis
 2. If that first workflow run fails with a permissions error pushing to `gh-pages`:
    Settings → Actions → General → Workflow permissions → **Read and write permissions**.
    Most repos don't need this; it depends on account/org defaults.
-3. After the first release (which commits to `main` and resets `dev`), a branch ruleset:
-   `main` requires a pull request and the `check` status, and blocks force pushes and
-   deletion; `dev` blocks force pushes and deletion. An agent acts through the owner's
-   account, so these rules don't tell it apart: they keep red changes off `main` whoever
-   merges. Ask the owner to set them; they need admin access.
+3. After the first release (which commits to `main` and resets `dev`), the owner runs
+   `pnpm exec create-grist-widget protect` (with their `gh` CLI): it creates the rulesets in
+   `.github/rulesets/` (`main` requires a pull request and the `check` status, and blocks
+   force pushes and deletion; `dev` blocks force pushes and deletion; no tag can be moved or
+   deleted), turns private vulnerability reporting on and checks Pages. An agent acts through
+   the owner's account, so these rules don't tell it apart: they keep red changes off `main`
+   whoever merges. Ask the owner to run it; it needs admin access.
 
 Full detail, including the two live URLs (`/latest/` and `/v<version>/`): `README.md`.
 
